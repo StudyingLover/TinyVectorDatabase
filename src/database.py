@@ -1,23 +1,23 @@
-from json import load
-from httpx import delete
 import numpy as np
 from collections import defaultdict
 from typing import List, Tuple
 import pickle
 from PIL import Image
 
-from encoder import image_to_features, text_to_features
+from src.encoder import image_to_features, text_to_features
 
+# 计算余弦相似度
 def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
     dot_product = np.dot(v1, v2)
     norm_v1 = np.linalg.norm(v1)
     norm_v2 = np.linalg.norm(v2)
     return dot_product / (norm_v1 * norm_v2)
 
+# 向量数据库的类
 class VectorDatabase:
     def __init__(self):
-        self.vectors = defaultdict(np.ndarray)
-        self.vector_dim = 768
+        self.vectors = defaultdict(np.ndarray) # 用于存储向量的字典
+        self.vector_dim = 768 # 向量维度
 
     def insert(self, key: str, vector: np.ndarray) -> None:
         if self.vector_dim is None:
@@ -25,6 +25,10 @@ class VectorDatabase:
         else:
             if vector.shape[0] != self.vector_dim:
                 raise ValueError("Vector dimension mismatch", vector.shape[0], self.vector_dim)
+            
+        # 判断key是否已经存在
+        if key in self.vectors:
+            raise ValueError("Key already exists")
         self.vectors[key] = vector
     
     def delete(self, key: str) -> None:
@@ -44,6 +48,9 @@ class VectorDatabase:
         with open(file_path, 'wb') as file:
             pickle.dump(self.vectors, file)
 
+    def get_all_keys(self) -> List[str]:
+        return list(self.vectors.keys())
+    
     @classmethod
     def load_database(cls, file_path: str) -> 'VectorDatabase':
         with open(file_path, 'rb') as file:
@@ -98,7 +105,7 @@ if __name__ == '__main__':
     # 随机生成10个向量插入
     for i in range(10):
         database.insert(str(i), np.random.rand(768))
-        
+    database.save_database('vector_db.pkl')
     database.delete('example_img')
     result = database.search(text_vector, 1)
     
